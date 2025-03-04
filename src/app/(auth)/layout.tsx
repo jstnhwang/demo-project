@@ -1,3 +1,4 @@
+// app/(auth)/layout.tsx
 import Image from "next/image";
 
 export default function AuthLayout({
@@ -10,7 +11,7 @@ export default function AuthLayout({
       {/* Image Section (60% on desktop) with glassmorphism */}
       <div className="hidden md:block md:w-3/5 relative overflow-hidden">
         <Image
-          src="/assets/image-1.jpg"
+          src="/assets/image-2.jpg"
           fill
           priority
           className="object-cover scale-110 blur-sm"

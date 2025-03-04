@@ -1,5 +1,6 @@
+// app/layout.tsx
+
 import { Toaster } from "@/components/ui/toaster";
-import { AuthProvider } from "@/contexts/auth-context";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -25,14 +26,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" data-theme="default">
+    <html lang="en" data-theme="sunset">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <AuthProvider>
-          <Toaster />
-          {children}
-        </AuthProvider>
+        <Toaster />
+        {children}
       </body>
     </html>
   );
