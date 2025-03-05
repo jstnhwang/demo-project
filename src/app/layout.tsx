@@ -1,6 +1,8 @@
 // app/layout.tsx
 
+import { RouteGuard } from "@/components/route-guard";
 import { Toaster } from "@/components/ui/toaster";
+import { AuthProvider } from "@/contexts/auth-context";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -30,8 +32,12 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <Toaster />
-        {children}
+        <AuthProvider>
+          <RouteGuard>
+            <Toaster />
+            {children}
+          </RouteGuard>
+        </AuthProvider>
       </body>
     </html>
   );

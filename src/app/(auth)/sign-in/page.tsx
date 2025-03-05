@@ -1,4 +1,3 @@
-// app/(auth)/sign-in/page.tsx
 "use client";
 
 import { AuthFormContainer } from "@/components/ui/auth-form-container";
@@ -12,7 +11,9 @@ export default function SignIn() {
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [isMagicLink, setIsMagicLink] = useState(false);
+  const [useMagicLink, setUseMagicLink] = useState(false);
+  const [magicLinkLoading, setMagicLinkLoading] = useState(false);
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
 
   const { signIn, signInWithGoogle, signInWithGitHub, signInWithMagicLink } =
     useAuth();
@@ -20,18 +21,15 @@ export default function SignIn() {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (useMagicLink) {
+      await handleMagicLinkSignIn();
+      return;
+    }
+
     setLoading(true);
 
     try {
-      if (isMagicLink) {
-        await signInWithMagicLink(email);
-        toast({
-          title: "Magic Link Sent",
-          description: "Check your email for the login link",
-        });
-        return;
-      }
-
       // Regular email/password sign in
       await signIn(email, password, rememberMe);
 
@@ -49,6 +47,37 @@ export default function SignIn() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleMagicLinkSignIn = async () => {
+    if (!email) {
+      toast({
+        title: "Error",
+        variant: "error",
+        description: "Please enter your email address.",
+      });
+      return;
+    }
+
+    setMagicLinkLoading(true);
+    try {
+      await signInWithMagicLink(email);
+      setMagicLinkSent(true);
+      toast({
+        title: "Magic Link Sent",
+        description: "Check your email for the login link",
+      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      console.error("Magic link error:", error);
+      toast({
+        title: "Error",
+        variant: "error",
+        description: error.message || "Failed to send magic link",
+      });
+    } finally {
+      setMagicLinkLoading(false);
     }
   };
 
@@ -78,6 +107,11 @@ export default function SignIn() {
     }
   };
 
+  const toggleMagicLink = () => {
+    setUseMagicLink(!useMagicLink);
+    setMagicLinkSent(false); // Reset this state when toggling
+  };
+
   return (
     <AuthFormContainer
       title="Welcome Back!"
@@ -99,48 +133,31 @@ export default function SignIn() {
           />
         </div>
 
-        {!isMagicLink && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label htmlFor="password" className="text-sm font-medium">
-                Password
-              </label>
-              <a
-                href="#"
-                className="text-sm text-primary underline-offset-4 hover:underline"
-              >
-                Forgot password?
-              </a>
-            </div>
-            <input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              className="input input-md w-full"
-              onChange={e => setPassword(e.target.value)}
-              required={!isMagicLink}
-            />
-          </div>
-        )}
-
-        {isMagicLink && (
-          <div>
-            <p className="text-sm text-content-50">
-              We&apos;ll email you a magic link for password-free sign in.
-            </p>
-            <button
-              type="button"
-              onClick={() => setIsMagicLink(false)}
-              className="text-sm text-primary underline-offset-4 hover:underline mt-2"
-            >
-              Use password instead
-            </button>
-          </div>
-        )}
-
-        {!isMagicLink && (
+        {!useMagicLink && (
           <>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label htmlFor="password" className="text-sm font-medium">
+                  Password
+                </label>
+                <a
+                  href="/forgot-password"
+                  className="text-sm text-primary underline-offset-4 hover:underline"
+                >
+                  Forgot password?
+                </a>
+              </div>
+              <input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                className="input input-md w-full"
+                onChange={e => setPassword(e.target.value)}
+                required
+              />
+            </div>
+
             <div className="flex items-center space-x-2">
               <input
                 type="checkbox"
@@ -156,28 +173,47 @@ export default function SignIn() {
                 Remember me
               </label>
             </div>
-
-            <button
-              type="button"
-              onClick={() => setIsMagicLink(true)}
-              className="text-sm text-primary underline-offset-4 hover:underline"
-            >
-              Use magic link instead
-            </button>
           </>
         )}
 
-        <button
-          type="submit"
-          className="btn btn-primary btn-md w-full"
-          disabled={loading}
-        >
-          {loading
-            ? "Please wait..."
-            : isMagicLink
-            ? "Send Magic Link"
-            : "Sign In"}
-        </button>
+        {useMagicLink && magicLinkSent ? (
+          <div className="bg-success/10 p-4 rounded-lg my-4">
+            <p className="text-sm text-success-content">
+              Magic link sent! Please check your email inbox and click on the
+              link to sign in.
+            </p>
+            <button
+              type="button"
+              onClick={() => setMagicLinkSent(false)}
+              className="text-sm text-primary underline-offset-4 hover:underline mt-2"
+            >
+              Send again
+            </button>
+          </div>
+        ) : (
+          <button
+            type={useMagicLink ? "button" : "submit"}
+            onClick={useMagicLink ? handleMagicLinkSignIn : undefined}
+            className="btn btn-primary btn-md w-full"
+            disabled={loading || magicLinkLoading}
+          >
+            {loading || magicLinkLoading
+              ? "Please wait..."
+              : useMagicLink
+              ? "Send Magic Link"
+              : "Sign In"}
+          </button>
+        )}
+
+        {useMagicLink && !magicLinkSent && (
+          <button
+            type="button"
+            onClick={toggleMagicLink}
+            className="btn btn-link btn-sm w-full"
+          >
+            Use password instead
+          </button>
+        )}
 
         <div className="divider text-sm">OR</div>
 
@@ -238,6 +274,35 @@ export default function SignIn() {
             </svg>
             Login with GitHub
           </button>
+
+          {!useMagicLink && !magicLinkSent && (
+            <button
+              type="button"
+              onClick={toggleMagicLink}
+              className="btn bg-white text-black border-[#e5e5e5] w-full"
+            >
+              <svg
+                aria-label="Email icon"
+                width="16"
+                height="16"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                className="mr-2"
+              >
+                <g
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                  strokeWidth="2"
+                  fill="none"
+                  stroke="black"
+                >
+                  <rect width="20" height="16" x="2" y="4" rx="2"></rect>
+                  <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
+                </g>
+              </svg>
+              Login with Email
+            </button>
+          )}
         </div>
 
         <div className="text-center mt-6">

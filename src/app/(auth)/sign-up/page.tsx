@@ -1,5 +1,3 @@
-// app/(auth)/sign-up/page.tsx
-
 "use client";
 
 import { AuthFormContainer } from "@/components/ui/auth-form-container";
@@ -16,14 +14,23 @@ export default function SignUp() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [magicLinkLoading, setMagicLinkLoading] = useState(false);
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
+  const [useMagicLink, setUseMagicLink] = useState(false);
 
-  const { signUp, signInWithGoogle, signInWithGitHub, signInWithMagicLink } =
+  const { signUp, signInWithGoogle, signInWithGitHub, signUpWithMagicLink } =
     useAuth();
+
   const { toast } = useToast();
   const router = useRouter();
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (useMagicLink) {
+      await handleMagicLinkSignUp();
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -84,14 +91,22 @@ export default function SignUp() {
 
     setMagicLinkLoading(true);
     try {
-      await signInWithMagicLink(email);
+      // Use the passwordless sign-up method
+      const response = await signUpWithMagicLink(email, name || undefined);
+
+      if (response.error) {
+        throw response.error;
+      }
+
+      setMagicLinkSent(true);
       toast({
         title: "Magic Link Sent",
-        description: "Check your email for the sign-up link",
+        description:
+          "Check your email for the magic link to create your account",
       });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-      console.error("Magic link error:", error);
+      console.error("Magic link sign-up error:", error);
       toast({
         title: "Error",
         variant: "error",
@@ -128,27 +143,17 @@ export default function SignUp() {
     }
   };
 
+  const toggleMagicLink = () => {
+    setUseMagicLink(!useMagicLink);
+    setMagicLinkSent(false); // Reset this state when toggling
+  };
+
   return (
     <AuthFormContainer
       title="Create an Account"
       subtitle="Join us and start your journey today!"
     >
       <form onSubmit={handleSignUp} className="space-y-5">
-        <div className="space-y-2">
-          <label htmlFor="name" className="block text-sm font-medium">
-            Full Name
-          </label>
-          <input
-            id="name"
-            type="text"
-            className="input input-md w-full"
-            placeholder="John Doe"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            required
-          />
-        </div>
-
         <div className="space-y-2">
           <label htmlFor="email" className="block text-sm font-medium">
             Email
@@ -164,46 +169,112 @@ export default function SignUp() {
           />
         </div>
 
-        <div className="space-y-2">
-          <label htmlFor="password" className="block text-sm font-medium">
-            Password
-          </label>
-          <input
-            id="password"
-            type="password"
-            placeholder="••••••••"
-            value={password}
-            className="input input-md w-full"
-            onChange={e => setPassword(e.target.value)}
-            required
-          />
-        </div>
+        {useMagicLink && (
+          <div className="space-y-2">
+            <label htmlFor="name" className="block text-sm font-medium">
+              Full Name (Optional)
+            </label>
+            <input
+              id="name"
+              type="text"
+              className="input input-md w-full"
+              placeholder="John Doe"
+              value={name}
+              onChange={e => setName(e.target.value)}
+            />
+          </div>
+        )}
 
-        <div className="space-y-2">
-          <label
-            htmlFor="confirmPassword"
-            className="block text-sm font-medium"
+        {!useMagicLink && (
+          <>
+            <div className="space-y-2">
+              <label htmlFor="name" className="block text-sm font-medium">
+                Full Name
+              </label>
+              <input
+                id="name"
+                type="text"
+                className="input input-md w-full"
+                placeholder="John Doe"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="password" className="block text-sm font-medium">
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                className="input input-md w-full"
+                onChange={e => setPassword(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label
+                htmlFor="confirmPassword"
+                className="block text-sm font-medium"
+              >
+                Confirm Password
+              </label>
+              <input
+                id="confirmPassword"
+                type="password"
+                placeholder="••••••••"
+                value={confirmPassword}
+                className="input input-md w-full"
+                onChange={e => setConfirmPassword(e.target.value)}
+                required
+              />
+            </div>
+          </>
+        )}
+
+        {useMagicLink && magicLinkSent ? (
+          <div className="bg-success/10 p-4 rounded-lg my-4">
+            <p className="text-sm text-success-content">
+              Magic link sent! Please check your email and click on the link to
+              create your account.
+            </p>
+            <button
+              type="button"
+              onClick={() => setMagicLinkSent(false)}
+              className="text-sm text-primary underline-offset-4 hover:underline mt-2"
+            >
+              Send again
+            </button>
+          </div>
+        ) : (
+          <button
+            type={useMagicLink ? "button" : "submit"}
+            onClick={useMagicLink ? handleMagicLinkSignUp : undefined}
+            className="btn btn-primary btn-md w-full"
+            disabled={loading || magicLinkLoading}
           >
-            Confirm Password
-          </label>
-          <input
-            id="confirmPassword"
-            type="password"
-            placeholder="••••••••"
-            value={confirmPassword}
-            className="input input-md w-full"
-            onChange={e => setConfirmPassword(e.target.value)}
-            required
-          />
-        </div>
+            {loading || magicLinkLoading
+              ? "Please wait..."
+              : useMagicLink
+              ? "Send Magic Link"
+              : "Sign Up"}
+          </button>
+        )}
 
-        <button
-          type="submit"
-          className="btn btn-primary btn-md w-full"
-          disabled={loading}
-        >
-          {loading ? "Please wait..." : "Sign Up"}
-        </button>
+        {useMagicLink && !magicLinkSent && (
+          <button
+            type="button"
+            onClick={toggleMagicLink}
+            className="btn btn-link btn-sm w-full"
+          >
+            Use password instead
+          </button>
+        )}
 
         <div className="divider text-sm">OR</div>
 
@@ -265,33 +336,34 @@ export default function SignUp() {
             Sign up with GitHub
           </button>
 
-          <button
-            type="button"
-            onClick={handleMagicLinkSignUp}
-            disabled={magicLinkLoading}
-            className="btn bg-white text-black border-[#e5e5e5] w-full"
-          >
-            <svg
-              aria-label="Email icon"
-              width="16"
-              height="16"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              className="mr-2"
+          {!useMagicLink && !magicLinkSent && (
+            <button
+              type="button"
+              onClick={toggleMagicLink}
+              className="btn bg-white text-black border-[#e5e5e5] w-full"
             >
-              <g
-                strokeLinejoin="round"
-                strokeLinecap="round"
-                strokeWidth="2"
-                fill="none"
-                stroke="black"
+              <svg
+                aria-label="Email icon"
+                width="16"
+                height="16"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                className="mr-2"
               >
-                <rect width="20" height="16" x="2" y="4" rx="2"></rect>
-                <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
-              </g>
-            </svg>
-            {magicLinkLoading ? "Sending..." : "Sign up with Email"}
-          </button>
+                <g
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                  strokeWidth="2"
+                  fill="none"
+                  stroke="black"
+                >
+                  <rect width="20" height="16" x="2" y="4" rx="2"></rect>
+                  <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
+                </g>
+              </svg>
+              Sign up with Email
+            </button>
+          )}
         </div>
 
         <div className="text-center mt-6">

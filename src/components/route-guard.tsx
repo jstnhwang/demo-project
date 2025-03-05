@@ -5,7 +5,13 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 // Define public routes that don't require authentication
-const publicRoutes = ["/sign-in", "/sign-up", "/auth/callback"];
+const publicRoutes = [
+  "/sign-in",
+  "/sign-up",
+  "/auth/callback",
+  "/forgot-password",
+  "/reset-password",
+];
 
 export function RouteGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
