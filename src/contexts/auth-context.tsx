@@ -1,7 +1,7 @@
 "use client";
 
 import { supabase } from "@/lib/supabase-client";
-import { AuthError, AuthResponse, User } from "@supabase/supabase-js";
+import { AuthResponse, User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import {
   createContext,
@@ -10,12 +10,6 @@ import {
   useEffect,
   useState,
 } from "react";
-
-type ResetPasswordResponse = {
-  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-  data: {} | null;
-  error: AuthError | null;
-};
 
 type AuthContextType = {
   user: User | null;
@@ -30,15 +24,13 @@ type AuthContextType = {
     password: string,
     rememberMe?: boolean
   ) => Promise<AuthResponse>;
-  signInWithMagicLink: (email: string) => Promise<AuthResponse>;
-  signUpWithMagicLink: (
+  signInWithMagicLink: (
     email: string,
-    fullName?: string
+    options?: unknown
   ) => Promise<AuthResponse>;
   signInWithGoogle: () => Promise<void>;
   signInWithGitHub: () => Promise<void>;
   signOut: () => Promise<void>;
-  resetPassword: (email: string) => Promise<ResetPasswordResponse>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -104,50 +96,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   // Sign in with email and password
-  const signIn = async (
-    email: string,
-    password: string,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    rememberMe = false
-  ) => {
+  const signIn = async (email: string, password: string) => {
     const response = await supabase.auth.signInWithPassword({
       email,
       password,
-      options: {},
+      options: {
+        // You can add session settings here like 'persist' for remember me
+      },
     });
 
     return response;
   };
 
-  // Sign in with magic link (for existing users)
+  // Sign in with magic link
   const signInWithMagicLink = async (email: string) => {
     return await supabase.auth.signInWithOtp({
       email,
       options: {
+        shouldCreateUser: false,
         emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-  };
-
-  // Sign up with magic link (for new users)
-  const signUpWithMagicLink = async (email: string, fullName?: string) => {
-    // For passwordless sign-up, we use signInWithOtp but store metadata
-    // in localStorage to use when creating the profile later
-    if (fullName) {
-      // Store the user's name temporarily in localStorage
-      localStorage.setItem("pendingSignUpName", fullName);
-    }
-
-    // Use signInWithOtp for passwordless flow
-    return await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback?signup=true`,
-        // Add metadata to identify this as a sign-up, not just a sign-in
-        data: {
-          isSignUp: true,
-          full_name: fullName || "",
-        },
       },
     });
   };
@@ -177,25 +144,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
   };
 
-  const resetPassword = async (
-    email: string
-  ): Promise<ResetPasswordResponse> => {
-    return await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-  };
-
   const value = {
     user,
     loading,
     signUp,
     signIn,
     signInWithMagicLink,
-    signUpWithMagicLink,
     signInWithGoogle,
     signInWithGitHub,
     signOut,
-    resetPassword,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

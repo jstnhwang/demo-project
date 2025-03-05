@@ -11,15 +11,13 @@ export default function SignUp() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [magicLinkLoading, setMagicLinkLoading] = useState(false);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
   const [useMagicLink, setUseMagicLink] = useState(false);
 
-  const { signUp, signInWithGoogle, signInWithGitHub, signUpWithMagicLink } =
+  const { signUp, signInWithGoogle, signInWithGitHub, signInWithMagicLink } =
     useAuth();
-
   const { toast } = useToast();
   const router = useRouter();
 
@@ -45,16 +43,6 @@ export default function SignUp() {
         return;
       }
 
-      if (password !== confirmPassword) {
-        toast({
-          title: "Error",
-          variant: "error",
-          description: "Passwords do not match",
-        });
-        setLoading(false);
-        return;
-      }
-
       // Sign up with Supabase
       await signUp(email, password, name);
 
@@ -66,13 +54,15 @@ export default function SignUp() {
 
       // Optionally redirect to login page or verification page
       router.push("/");
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Sign up error:", error);
       toast({
         title: "Error",
         variant: "error",
-        description: error.message || "An unexpected error occurred",
+        description:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
       });
     } finally {
       setLoading(false);
@@ -91,26 +81,19 @@ export default function SignUp() {
 
     setMagicLinkLoading(true);
     try {
-      // Use the passwordless sign-up method
-      const response = await signUpWithMagicLink(email, name || undefined);
-
-      if (response.error) {
-        throw response.error;
-      }
-
+      await signInWithMagicLink(email);
       setMagicLinkSent(true);
       toast({
         title: "Magic Link Sent",
-        description:
-          "Check your email for the magic link to create your account",
+        description: "Check your email for the sign-up link",
       });
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (error: any) {
-      console.error("Magic link sign-up error:", error);
+    } catch (error: unknown) {
+      console.error("Magic link error:", error);
       toast({
         title: "Error",
         variant: "error",
-        description: error.message || "Failed to send magic link",
+        description:
+          error instanceof Error ? error.message : "Failed to send magic link",
       });
     } finally {
       setMagicLinkLoading(false);
@@ -120,12 +103,25 @@ export default function SignUp() {
   const handleGoogleSignUp = async () => {
     try {
       await signInWithGoogle();
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
+    } catch (error: unknown) {
+      console.error("Google authentication error:", error);
+
+      let description = "Failed to sign up with Google";
+
+      if (error instanceof Error) {
+        if (error.message.includes("popup_closed_by_user")) {
+          description =
+            "Sign up canceled. You closed the Google authentication window.";
+        } else if (error.message.includes("network")) {
+          description =
+            "Network error. Please check your connection and try again.";
+        }
+      }
+
       toast({
-        title: "Error",
+        title: "Authentication Error",
         variant: "error",
-        description: "Failed to sign up with Google",
+        description,
       });
     }
   };
@@ -133,12 +129,25 @@ export default function SignUp() {
   const handleGitHubSignUp = async () => {
     try {
       await signInWithGitHub();
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
+    } catch (error: unknown) {
+      console.error("GitHub authentication error:", error);
+
+      let description = "Failed to sign up with GitHub";
+
+      if (error instanceof Error) {
+        if (error.message.includes("popup_closed_by_user")) {
+          description =
+            "Sign up canceled. You closed the GitHub authentication window.";
+        } else if (error.message.includes("network")) {
+          description =
+            "Network error. Please check your connection and try again.";
+        }
+      }
+
       toast({
-        title: "Error",
+        title: "Authentication Error",
         variant: "error",
-        description: "Failed to sign up with GitHub",
+        description,
       });
     }
   };
@@ -153,7 +162,7 @@ export default function SignUp() {
       title="Create an Account"
       subtitle="Join us and start your journey today!"
     >
-      <form onSubmit={handleSignUp} className="space-y-5">
+      <form onSubmit={handleSignUp} className="space-y-4">
         <div className="space-y-2">
           <label htmlFor="email" className="block text-sm font-medium">
             Email
@@ -162,34 +171,18 @@ export default function SignUp() {
             id="email"
             type="email"
             className="input input-md w-full"
-            placeholder="your@email.com"
+            placeholder="you@example.com"
             value={email}
             onChange={e => setEmail(e.target.value)}
             required
           />
         </div>
 
-        {useMagicLink && (
-          <div className="space-y-2">
-            <label htmlFor="name" className="block text-sm font-medium">
-              Full Name (Optional)
-            </label>
-            <input
-              id="name"
-              type="text"
-              className="input input-md w-full"
-              placeholder="John Doe"
-              value={name}
-              onChange={e => setName(e.target.value)}
-            />
-          </div>
-        )}
-
         {!useMagicLink && (
           <>
             <div className="space-y-2">
               <label htmlFor="name" className="block text-sm font-medium">
-                Full Name
+                Full Name (Optional)
               </label>
               <input
                 id="name"
@@ -216,32 +209,14 @@ export default function SignUp() {
                 required
               />
             </div>
-
-            <div className="space-y-2">
-              <label
-                htmlFor="confirmPassword"
-                className="block text-sm font-medium"
-              >
-                Confirm Password
-              </label>
-              <input
-                id="confirmPassword"
-                type="password"
-                placeholder="••••••••"
-                value={confirmPassword}
-                className="input input-md w-full"
-                onChange={e => setConfirmPassword(e.target.value)}
-                required
-              />
-            </div>
           </>
         )}
 
         {useMagicLink && magicLinkSent ? (
           <div className="bg-success/10 p-4 rounded-lg my-4">
             <p className="text-sm text-success-content">
-              Magic link sent! Please check your email and click on the link to
-              create your account.
+              Magic link sent! Please check your email inbox and click on the
+              link to complete your sign-up.
             </p>
             <button
               type="button"

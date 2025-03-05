@@ -2,15 +2,13 @@
 
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/lib/supabase-client";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 export default function Dashboard() {
   const { user, loading, signOut } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
-  const [profileChecked, setProfileChecked] = useState(false);
 
   useEffect(() => {
     // Redirect to login if not authenticated
@@ -18,58 +16,6 @@ export default function Dashboard() {
       router.push("/sign-in");
     }
   }, [user, loading, router]);
-
-  useEffect(() => {
-    // Check if the user has a profile and create one if needed
-    // This is a safety measure for magic link sign-ups
-    const checkAndCreateProfile = async () => {
-      if (!user || profileChecked) return;
-
-      try {
-        // Check if profile exists
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { data, error } = await supabase
-          .from("profiles")
-          .select()
-          .eq("user_id", user.id)
-          .single();
-
-        // If no profile exists, create one
-        if (error) {
-          // Check for name in localStorage (from magic link sign-up)
-          let fullName = "";
-          if (typeof window !== "undefined") {
-            fullName = localStorage.getItem("pendingSignUpName") || "";
-            // Clear the stored name after using it
-            localStorage.removeItem("pendingSignUpName");
-          }
-
-          // Fall back to user metadata if no name in localStorage
-          if (!fullName && user.user_metadata) {
-            fullName = user.user_metadata.full_name || "";
-          }
-
-          // Create the profile
-          await supabase.from("profiles").upsert({
-            user_id: user.id,
-            full_name: fullName,
-            updated_at: new Date().toISOString(),
-          });
-
-          toast({
-            title: "Profile Created",
-            description: "Your user profile has been set up successfully",
-          });
-        }
-      } catch (err) {
-        console.error("Error checking/creating profile:", err);
-      } finally {
-        setProfileChecked(true);
-      }
-    };
-
-    checkAndCreateProfile();
-  }, [user, profileChecked, toast]);
 
   const handleSignOut = async () => {
     try {

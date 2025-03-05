@@ -3,17 +3,56 @@
 import { AuthFormContainer } from "@/components/ui/auth-form-container";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase-client";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function ResetPassword() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [resetComplete, setResetComplete] = useState(false);
+  const [isValidResetFlow, setIsValidResetFlow] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
   const { toast } = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Get the flow parameter from the URL
+  const flow = searchParams.get("flow");
+  const isRecoveryFlow = flow === "recovery";
+
+  // Check if this is a valid password reset flow
+  useEffect(() => {
+    const validateResetFlow = async () => {
+      try {
+        // Check if we have an active session
+        const { data, error } = await supabase.auth.getSession();
+
+        if (error) {
+          throw error;
+        }
+
+        // We need both a valid session AND the recovery flow parameter
+        if (data.session && isRecoveryFlow) {
+          setIsValidResetFlow(true);
+        } else if (data.session && !isRecoveryFlow) {
+          // User is logged in but not in a recovery flow - redirect to dashboard
+          router.push("/dashboard");
+        } else {
+          // No session - redirect to sign in
+          router.push("/sign-in");
+        }
+      } catch (error) {
+        console.error("Session validation error:", error);
+        router.push("/sign-in");
+      } finally {
+        setCheckingAuth(false);
+      }
+    };
+
+    validateResetFlow();
+  }, [router, isRecoveryFlow]);
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,8 +81,6 @@ export default function ResetPassword() {
       }
 
       // Update the user's password
-      // When the user clicks the reset link in their email, Supabase automatically
-      // creates a recovery session. We can use this session to update the password.
       const { error } = await supabase.auth.updateUser({
         password: password,
       });
@@ -52,29 +89,67 @@ export default function ResetPassword() {
 
       // Show success message
       setResetComplete(true);
+
       toast({
         title: "Success",
         description: "Your password has been reset successfully",
       });
 
-      // Redirect to sign-in page after a delay
+      // Redirect to dashboard after a delay
       setTimeout(() => {
-        router.push("/sign-in");
+        router.push("/dashboard");
       }, 3000);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error("Reset password error:", error);
       toast({
         title: "Error",
         variant: "error",
         description:
-          error.message ||
-          "Failed to reset password. Make sure you're using the link from your email.",
+          error.message || "Failed to reset password. Please try again.",
       });
     } finally {
       setLoading(false);
     }
   };
+
+  // Show loading state while checking authentication
+  if (checkingAuth) {
+    return (
+      <AuthFormContainer
+        title="Preparing Reset Password"
+        subtitle="Please wait while we prepare your password reset..."
+      >
+        <div className="flex justify-center my-8">
+          <div className="loading loading-spinner loading-lg"></div>
+        </div>
+      </AuthFormContainer>
+    );
+  }
+
+  // If not a valid reset flow, show an error
+  if (!isValidResetFlow && !resetComplete) {
+    return (
+      <AuthFormContainer
+        title="Invalid Reset Request"
+        subtitle="This doesn't appear to be a valid password reset request"
+      >
+        <div className="space-y-6">
+          <div className="bg-error/10 p-4 rounded-lg">
+            <p className="text-sm text-error-content">
+              Your password reset link may have expired or is invalid. Please
+              request a new password reset link.
+            </p>
+          </div>
+          <button
+            onClick={() => router.push("/forgot-password")}
+            className="btn btn-primary w-full"
+          >
+            Request New Reset Link
+          </button>
+        </div>
+      </AuthFormContainer>
+    );
+  }
 
   return (
     <AuthFormContainer
@@ -86,7 +161,7 @@ export default function ResetPassword() {
           <div className="bg-success/10 p-4 rounded-lg">
             <p className="text-sm text-success-content">
               Your password has been reset successfully! You will be redirected
-              to the sign-in page shortly.
+              to the dashboard shortly.
             </p>
           </div>
         </div>

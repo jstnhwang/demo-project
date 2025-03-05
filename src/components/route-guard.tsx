@@ -8,9 +8,8 @@ import { useEffect } from "react";
 const publicRoutes = [
   "/sign-in",
   "/sign-up",
-  "/auth/callback",
   "/forgot-password",
-  "/reset-password",
+  "/auth/callback",
 ];
 
 export function RouteGuard({ children }: { children: React.ReactNode }) {
