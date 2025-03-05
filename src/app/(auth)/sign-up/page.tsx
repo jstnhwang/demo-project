@@ -1,6 +1,7 @@
 "use client";
 
 import { AuthFormContainer } from "@/components/ui/auth-form-container";
+import { MagicLinkConfirmation } from "@/components/ui/magic-link-confirmation";
 import { SocialAuthButton } from "@/components/ui/social-auth-button";
 import { useAuthForm } from "@/hooks/use-auth-form";
 import Link from "next/link";
@@ -96,19 +97,16 @@ export default function SignUp() {
         )}
 
         {useMagicLink && magicLinkSent ? (
-          <div className="bg-success/10 p-4 rounded-lg my-4">
-            <p className="text-sm text-success-content">
-              Magic link sent! Please check your email inbox and click on the
-              link to complete your sign-up.
-            </p>
-            <button
-              type="button"
-              onClick={() => setMagicLinkSent(false)}
-              className="text-sm text-primary underline-offset-4 hover:underline mt-2"
-            >
-              Send again
-            </button>
-          </div>
+          <MagicLinkConfirmation
+            email={email}
+            onResendClick={async () => {
+              setMagicLinkSent(false);
+              await handleSubmit(
+                new Event("submit") as unknown as React.FormEvent
+              );
+            }}
+            resendDisabled={magicLinkLoading}
+          />
         ) : (
           <button
             type="submit"

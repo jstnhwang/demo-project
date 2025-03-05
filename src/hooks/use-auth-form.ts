@@ -193,6 +193,12 @@ export function useAuthForm({ mode, redirectAfterSuccess }: UseAuthFormProps) {
     setMagicLinkLoading(true);
 
     try {
+      // Log the attempt for debugging
+      console.info(`Sending magic link for ${mode}:`, {
+        email,
+        name: name || undefined,
+      });
+
       // Different behavior based on mode
       if (mode === "signup") {
         // For signup, include user metadata and ensure user creation is allowed
@@ -218,6 +224,9 @@ export function useAuthForm({ mode, redirectAfterSuccess }: UseAuthFormProps) {
         if (response.error) throw response.error;
       }
 
+      // Log successful send
+      console.info(`Magic link email successfully sent to ${email}`);
+
       setMagicLinkSent(true);
 
       toast({
@@ -227,7 +236,15 @@ export function useAuthForm({ mode, redirectAfterSuccess }: UseAuthFormProps) {
         } link`,
       });
     } catch (error: unknown) {
-      console.error("Magic link error:", error);
+      // Enhanced error logging
+      console.error("Magic link error:", {
+        email,
+        mode,
+        error:
+          error instanceof Error
+            ? { message: error.message, name: error.name, stack: error.stack }
+            : error,
+      });
 
       const { message } = handleAuthError(error, "magic_link");
 
