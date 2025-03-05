@@ -1,3 +1,4 @@
+// src/contexts/auth-context.tsx
 "use client";
 
 import { supabase } from "@/lib/supabase-client";
@@ -26,7 +27,10 @@ type AuthContextType = {
   ) => Promise<AuthResponse>;
   signInWithMagicLink: (
     email: string,
-    options?: unknown
+    options?: {
+      isSignUp?: boolean;
+      metadata?: Record<string, unknown>;
+    }
   ) => Promise<AuthResponse>;
   signInWithGoogle: () => Promise<void>;
   signInWithGitHub: () => Promise<void>;
@@ -109,12 +113,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   // Sign in with magic link
-  const signInWithMagicLink = async (email: string) => {
+  const signInWithMagicLink = async (
+    email: string,
+    options?: {
+      isSignUp?: boolean;
+      metadata?: Record<string, unknown>;
+    }
+  ) => {
     return await supabase.auth.signInWithOtp({
       email,
       options: {
-        shouldCreateUser: false,
+        // Allow user creation for sign-up, prevent for sign-in
+        shouldCreateUser: options?.isSignUp ?? false,
         emailRedirectTo: `${window.location.origin}/auth/callback`,
+        data: options?.metadata || undefined,
       },
     });
   };

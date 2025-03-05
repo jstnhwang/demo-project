@@ -1,3 +1,4 @@
+// src/hooks/use-auth-form.ts
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -192,18 +193,29 @@ export function useAuthForm({ mode, redirectAfterSuccess }: UseAuthFormProps) {
     setMagicLinkLoading(true);
 
     try {
-      // According to Supabase docs, signInWithMagicLink (signInWithOTP) creates users
-      // if they don't exist, so we use it for both signin and signup
+      // Different behavior based on mode
+      if (mode === "signup") {
+        // For signup, include user metadata and ensure user creation is allowed
+        const metadata = name ? { full_name: name } : undefined;
 
-      // For signup, include user metadata
-      if (mode === "signup" && name) {
-        // Use localStorage to temporarily store the name (similar to your original approach)
-        if (typeof window !== "undefined") {
+        const response = await signInWithMagicLink(email, {
+          isSignUp: true,
+          metadata,
+        });
+
+        // Store name temporarily for potential use after redirect
+        if (name && typeof window !== "undefined") {
           localStorage.setItem("pendingSignUpName", name);
         }
 
-        // Pass metadata to indicate this is a signup
-        await signInWithMagicLink(email);
+        // Check for error
+        if (response.error) throw response.error;
+      } else {
+        // For sign-in, don't create new users
+        const response = await signInWithMagicLink(email, { isSignUp: false });
+
+        // Check for error
+        if (response.error) throw response.error;
       }
 
       setMagicLinkSent(true);

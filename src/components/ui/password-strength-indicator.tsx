@@ -43,7 +43,7 @@ export function PasswordStrengthIndicator({
       <p className="text-xs font-medium text-neutral-600">
         Password must contain:
       </p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-1 gap-x-3">
+      <div className="grid grid-cols-1  gap-y-1 gap-x-3">
         {criteriaItems.map((item, index) => {
           const isMet = item.validator(password);
           return (
