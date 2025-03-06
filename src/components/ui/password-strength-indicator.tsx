@@ -1,4 +1,3 @@
-// components/ui/password-strength-indicator.tsx
 "use client";
 
 import { passwordCriteria } from "@/lib/schemas/auth-schema";

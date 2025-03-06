@@ -122,6 +122,7 @@ export function isStrongPassword(password: string): boolean {
     password.length >= 8 &&
     /[A-Z]/.test(password) &&
     /[a-z]/.test(password) &&
-    /[0-9]/.test(password)
+    /[0-9]/.test(password) &&
+    /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)
   );
 }

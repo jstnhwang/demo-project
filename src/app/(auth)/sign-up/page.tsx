@@ -2,6 +2,7 @@
 
 import { AuthFormContainer } from "@/components/ui/auth-form-container";
 import { MagicLinkConfirmation } from "@/components/ui/magic-link-confirmation";
+import { PasswordStrengthIndicator } from "@/components/ui/password-strength-indicator";
 import { SocialAuthButton } from "@/components/ui/social-auth-button";
 import { useAuthForm } from "@/hooks/use-auth-form";
 import Link from "next/link";
@@ -76,6 +77,8 @@ export default function SignUp() {
                 required
               />
             </div>
+
+            <PasswordStrengthIndicator password={password} />
           </>
         )}
 

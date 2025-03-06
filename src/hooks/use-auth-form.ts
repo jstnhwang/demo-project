@@ -86,7 +86,7 @@ export function useAuthForm({ mode, redirectAfterSuccess }: UseAuthFormProps) {
         title: "Weak Password",
         variant: "error",
         description:
-          "Password must be at least 8 characters and include uppercase, lowercase letters and numbers.",
+          "Password must be at least 8 characters, include uppercase, lowercase letters and numbers and a special character.",
       });
       return false;
     }
