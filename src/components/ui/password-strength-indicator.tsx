@@ -39,9 +39,6 @@ export function PasswordStrengthIndicator({
 
   return (
     <div className="mt-2 space-y-2">
-      <p className="text-xs font-medium text-neutral-600">
-        Password must contain:
-      </p>
       <div className="grid grid-cols-1  gap-y-1 gap-x-3">
         {criteriaItems.map((item, index) => {
           const isMet = item.validator(password);
@@ -49,7 +46,7 @@ export function PasswordStrengthIndicator({
             <div
               key={index}
               className={`flex items-center text-xs transition-colors ${
-                isMet ? "text-success" : "text-neutral-400"
+                isMet ? "text-success" : "text-neutral-600"
               }`}
             >
               {isMet ? (
