@@ -1,6 +1,7 @@
 "use client";
 
 import { AuthFormContainer } from "@/components/ui/auth-form-container";
+import { FormField } from "@/components/ui/form-field";
 import { MagicLinkConfirmation } from "@/components/ui/magic-link-confirmation";
 import { SocialAuthButton } from "@/components/ui/social-auth-button";
 import { useAuthForm } from "@/hooks/use-auth-form";
@@ -17,6 +18,9 @@ export default function SignIn() {
     magicLinkLoading,
     magicLinkSent,
     setMagicLinkSent,
+    errors,
+    validateEmailField,
+    validatePasswordField,
     handleSubmit,
     handleSocialAuth,
     toggleAuthMethod,
@@ -40,27 +44,25 @@ export default function SignIn() {
         />
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <label htmlFor="email" className="block text-sm font-medium">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              className="input input-md w-full"
-              placeholder="you@example.com"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-            />
-          </div>
+          <FormField
+            id="email"
+            label="Email"
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            placeholder="you@example.com"
+            required
+            error={errors.email}
+            onBlur={validateEmailField}
+            autoComplete="email"
+          />
 
           {!useMagicLink && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label htmlFor="password" className="text-sm font-medium">
                   Password
+                  <span className="text-error ml-1">*</span>
                 </label>
                 <Link
                   href="/forgot-password"
@@ -74,11 +76,17 @@ export default function SignIn() {
                 type="password"
                 placeholder="••••••••"
                 value={password}
-                className="input input-md w-full"
+                className={`input input-md w-full ${
+                  errors.password ? "input-error border-error" : ""
+                }`}
                 onChange={e => setPassword(e.target.value)}
+                onBlur={validatePasswordField}
                 required
                 autoComplete="current-password"
               />
+              {errors.password && (
+                <p className="text-error text-xs mt-1">{errors.password}</p>
+              )}
             </div>
           )}
 

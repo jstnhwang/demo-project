@@ -1,4 +1,5 @@
-// src/hooks/use-auth-form.ts
+"use client";
+
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -16,6 +17,12 @@ interface UseAuthFormProps {
   redirectAfterSuccess?: string;
 }
 
+export interface FormErrors {
+  email: string;
+  password: string;
+  name: string;
+}
+
 export function useAuthForm({ mode, redirectAfterSuccess }: UseAuthFormProps) {
   const router = useRouter();
 
@@ -23,6 +30,13 @@ export function useAuthForm({ mode, redirectAfterSuccess }: UseAuthFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+
+  // Form errors state
+  const [errors, setErrors] = useState<FormErrors>({
+    email: "",
+    password: "",
+    name: "",
+  });
 
   // UI state
   const [isLoading, setIsLoading] = useState(false);
@@ -41,69 +55,75 @@ export function useAuthForm({ mode, redirectAfterSuccess }: UseAuthFormProps) {
 
   const { toast } = useToast();
 
-  // Redirect helper
   const handleAuthSuccess = () => {
     if (redirectAfterSuccess) {
       router.push(redirectAfterSuccess);
     }
   };
 
-  // Input validation
-  const validateEmail = (): boolean => {
-    if (!email) {
-      toast({
-        title: "Email Required",
-        variant: "error",
-        description: "Please enter your email address.",
-      });
+  // Field-specific validation functions
+  const validateEmailField = (): boolean => {
+    if (!email.trim()) {
+      setErrors(prev => ({ ...prev, email: "This field is required" }));
       return false;
     }
 
     if (!isValidEmail(email)) {
-      toast({
-        title: "Invalid Email",
-        variant: "error",
-        description: "Please enter a valid email address.",
-      });
+      setErrors(prev => ({
+        ...prev,
+        email: "Please enter a valid email address",
+      }));
       return false;
     }
 
+    setErrors(prev => ({ ...prev, email: "" }));
     return true;
   };
 
-  const validatePassword = (): boolean => {
+  const validatePasswordField = (): boolean => {
     if (!password) {
-      toast({
-        title: "Password Required",
-        variant: "error",
-        description: "Please enter your password.",
-      });
+      setErrors(prev => ({ ...prev, password: "This field is required" }));
       return false;
     }
 
     if (mode === "signup" && !isStrongPassword(password)) {
-      toast({
-        title: "Weak Password",
-        variant: "error",
-        description:
-          "Password must be at least 8 characters, include uppercase, lowercase letters and numbers and a special character.",
-      });
+      // For password, we don't show specific requirements here since they're shown in the indicator
+      setErrors(prev => ({
+        ...prev,
+        password: "Please ensure your password meets all the requirements",
+      }));
       return false;
     }
 
+    setErrors(prev => ({ ...prev, password: "" }));
     return true;
   };
 
-  const validateName = (): boolean => {
-    if (mode === "signup" && !useMagicLink && !name) {
-      toast({
-        title: "Name Required",
-        variant: "error",
-        description: "Please enter your full name.",
-      });
+  const validateNameField = (): boolean => {
+    if (mode === "signup" && !name.trim()) {
+      setErrors(prev => ({ ...prev, name: "This field is required" }));
       return false;
     }
+
+    if (mode === "signup" && name.trim().length < 2) {
+      setErrors(prev => ({
+        ...prev,
+        name: "Name must be at least 2 characters",
+      }));
+      return false;
+    }
+
+    setErrors(prev => ({ ...prev, name: "" }));
     return true;
+  };
+
+  // Validate all fields
+  const validateAllFields = (): boolean => {
+    const emailValid = validateEmailField();
+    const passwordValid = !useMagicLink ? validatePasswordField() : true;
+    const nameValid = mode === "signup" ? validateNameField() : true;
+
+    return emailValid && passwordValid && nameValid;
   };
 
   // Handle sign in/up with email/password
@@ -115,8 +135,8 @@ export function useAuthForm({ mode, redirectAfterSuccess }: UseAuthFormProps) {
       return;
     }
 
-    // Validate inputs
-    if (!validateEmail() || !validatePassword() || !validateName()) {
+    // Validate all fields
+    if (!validateAllFields()) {
       return;
     }
 
@@ -188,7 +208,9 @@ export function useAuthForm({ mode, redirectAfterSuccess }: UseAuthFormProps) {
 
   // Handle magic link for both sign-in and sign-up
   const handleMagicLink = async () => {
-    if (!validateEmail()) return;
+    if (!validateEmailField()) return;
+
+    if (mode === "signup" && !validateNameField()) return;
 
     setMagicLinkLoading(true);
 
@@ -285,6 +307,7 @@ export function useAuthForm({ mode, redirectAfterSuccess }: UseAuthFormProps) {
   const toggleAuthMethod = async (): Promise<void> => {
     setUseMagicLink(!useMagicLink);
     setMagicLinkSent(false);
+    setErrors({ email: "", password: "", name: "" });
     return Promise.resolve();
   };
 
@@ -300,8 +323,14 @@ export function useAuthForm({ mode, redirectAfterSuccess }: UseAuthFormProps) {
     useMagicLink,
     magicLinkLoading,
     magicLinkSent,
+    errors,
 
-    // Methods
+    // Validation methods
+    validateEmailField,
+    validatePasswordField,
+    validateNameField,
+
+    // Form handling methods
     handleSubmit,
     handleSocialAuth,
     toggleAuthMethod,
