@@ -12,6 +12,10 @@ export async function GET(request: NextRequest) {
 
     // Exchange the code for a session
     await supabase.auth.exchangeCodeForSession(code);
+
+    return NextResponse.redirect(
+      new URL(`/reset-password?recovery=true`, request.url)
+    );
   }
 
   // Redirect to the dashboard page

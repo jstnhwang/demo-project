@@ -103,4 +103,33 @@ export const authLogEvents = {
   sessionChanged: (event: string) => {
     authLogger.info(`Auth session state changed: ${event}`);
   },
+
+  passwordReset: (
+    status: "request" | "success" | "error",
+    data?: AuthData | unknown
+  ) => {
+    if (status === "request") {
+      authLogger.info(
+        "Password reset requested",
+        redactSensitiveData(data as AuthData)
+      );
+    } else if (status === "success") {
+      authLogger.info(
+        "Password reset email sent successfully",
+        redactSensitiveData(data as AuthData)
+      );
+    } else {
+      authLogger.error("Password reset error", data);
+    }
+  },
+
+  passwordUpdate: (status: "attempt" | "success" | "error", data?: unknown) => {
+    if (status === "attempt") {
+      authLogger.info("Password update attempted");
+    } else if (status === "success") {
+      authLogger.info("Password updated successfully");
+    } else {
+      authLogger.error("Password update error", data);
+    }
+  },
 };

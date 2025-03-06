@@ -3,7 +3,12 @@
 
 import { authLogEvents } from "@/lib/auth-logger";
 import { supabase } from "@/lib/supabase-client";
-import { AuthResponse, User } from "@supabase/supabase-js";
+import {
+  AuthError,
+  AuthResponse,
+  User,
+  UserResponse,
+} from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import {
   createContext,
@@ -13,19 +18,27 @@ import {
   useState,
 } from "react";
 
+type ResetPasswordResponse = {
+  data: unknown;
+  error: AuthError | null;
+};
+
 type AuthContextType = {
   user: User | null;
   loading: boolean;
+
   signUp: (
     email: string,
     password: string,
     fullName: string
   ) => Promise<AuthResponse>;
+
   signIn: (
     email: string,
     password: string,
     rememberMe?: boolean
   ) => Promise<AuthResponse>;
+
   signInWithMagicLink: (
     email: string,
     options?: {
@@ -33,9 +46,13 @@ type AuthContextType = {
       metadata?: Record<string, unknown>;
     }
   ) => Promise<AuthResponse>;
+
   signInWithGoogle: () => Promise<void>;
   signInWithGitHub: () => Promise<void>;
   signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<ResetPasswordResponse>;
+  updatePasswordWithToken: (password: string) => Promise<UserResponse>;
+  isPasswordRecovery: boolean;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -43,6 +60,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -64,9 +82,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       authLogEvents.sessionChanged(event);
       setUser(session?.user || null);
 
+      // Handle PASSWORD_RECOVERY event
+      if (event === "PASSWORD_RECOVERY") {
+        setIsPasswordRecovery(true);
+        router.push("/reset-password");
+      }
+
       // Redirect if signed in or out
-      if (event === "SIGNED_IN" && session) {
-        router.push("/dashboard");
+      else if (event === "SIGNED_IN" && session) {
+        // Only redirect to dashboard if not in password recovery mode
+        if (!isPasswordRecovery) {
+          router.push("/dashboard");
+        }
       } else if (event === "SIGNED_OUT") {
         router.push("/sign-in");
       }
@@ -75,7 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       subscription.unsubscribe();
     };
-  }, [router]);
+  }, [router, isPasswordRecovery]);
 
   // Sign up with email and password
   const signUp = async (email: string, password: string, fullName: string) => {
@@ -188,6 +215,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
   };
 
+  // Reset password
+  const resetPassword = async (
+    email: string
+  ): Promise<ResetPasswordResponse> => {
+    authLogEvents.passwordReset("request", { email });
+
+    try {
+      const response = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}`,
+      });
+
+      if (response.error) {
+        authLogEvents.passwordReset("error", response.error);
+      } else {
+        authLogEvents.passwordReset("success", { email });
+      }
+
+      return response;
+    } catch (error) {
+      authLogEvents.passwordReset("error", error);
+      throw error;
+    }
+  };
+
+  // Update user password function
+  const updatePasswordWithToken = async (
+    password: string
+  ): Promise<UserResponse> => {
+    authLogEvents.passwordUpdate("attempt");
+
+    try {
+      const response = await supabase.auth.updateUser({
+        password,
+      });
+
+      if (response.error) {
+        authLogEvents.passwordUpdate("error", response.error);
+      } else {
+        authLogEvents.passwordUpdate("success");
+        // Reset the password recovery flag after successful update
+        setIsPasswordRecovery(false);
+      }
+
+      return response;
+    } catch (error) {
+      authLogEvents.passwordUpdate("error", error);
+      throw error;
+    }
+  };
+
   const value = {
     user,
     loading,
@@ -197,6 +274,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signInWithGoogle,
     signInWithGitHub,
     signOut,
+    resetPassword,
+    updatePasswordWithToken,
+    isPasswordRecovery,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
