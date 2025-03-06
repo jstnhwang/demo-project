@@ -1,4 +1,3 @@
-// lib/schemas/auth-schema.ts
 import { z } from "zod";
 
 // Individual password criteria validators
@@ -12,6 +11,7 @@ export const passwordCriteria = {
 };
 
 // Password schema with all requirements
+// change as it you seem necessary, but I recommend to leave this part as this is minimum requirement for Supabase
 export const passwordSchema = z
   .string()
   .refine(passwordCriteria.hasUppercase, {

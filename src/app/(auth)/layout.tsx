@@ -8,7 +8,7 @@ export default function AuthLayout({
 }) {
   return (
     <div className="flex flex-col md:flex-row w-full h-screen">
-      {/* Image Section (60% on desktop) with glassmorphism */}
+      {/* Image Section (60% on desktop) */}
       <div className="hidden md:block md:w-3/5 relative overflow-hidden">
         <Image
           src="/assets/image-2.jpg"

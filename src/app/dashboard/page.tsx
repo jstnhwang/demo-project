@@ -42,8 +42,9 @@ export default function Dashboard() {
     );
   }
 
+  // It will redirect in useEffect
   if (!user) {
-    return null; // Will redirect in useEffect
+    return null;
   }
 
   return (
