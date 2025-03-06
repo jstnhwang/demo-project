@@ -58,36 +58,26 @@ export default function SignIn() {
           />
 
           {!useMagicLink && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label htmlFor="password" className="text-sm font-medium">
-                  Password
-                  <span className="text-error ml-1">*</span>
-                </label>
+            <FormField
+              id="password"
+              label="Password"
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              placeholder="••••••••"
+              required
+              error={errors.password}
+              onBlur={validatePasswordField}
+              autoComplete="current-password"
+              rightElement={
                 <Link
                   href="/forgot-password"
                   className="text-sm text-primary underline-offset-4 hover:underline"
                 >
                   Forgot password?
                 </Link>
-              </div>
-              <input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                className={`input input-md w-full ${
-                  errors.password ? "input-error border-error" : ""
-                }`}
-                onChange={e => setPassword(e.target.value)}
-                onBlur={validatePasswordField}
-                required
-                autoComplete="current-password"
-              />
-              {errors.password && (
-                <p className="text-error text-xs mt-1">{errors.password}</p>
-              )}
-            </div>
+              }
+            />
           )}
 
           <button
